@@ -1,2 +1,8 @@
 databaseChangeLog:
-  - 
+  - changeSet:
+      id: 1
+      author: nikita
+      changes:
+        - sqlFile:
+            path: changes/V_001_initial_field.sql
+            relativeToChangelogFile: true

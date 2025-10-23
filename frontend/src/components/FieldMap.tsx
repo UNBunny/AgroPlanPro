@@ -192,7 +192,7 @@ export function FieldMap({
 
   return (
     <MapContainer
-      center={[55.7558, 37.6176]} // Москва
+      center={[54.9924, 73.3686]} // Омск
       zoom={10}
       style={{ height: '100%', width: '100%' }}
     >
@@ -328,6 +328,7 @@ export function FieldMap({
             dashArray: '8, 4'
           }}
         />
+
       )}
     </MapContainer>
   )
