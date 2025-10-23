@@ -43,6 +43,15 @@ public interface AgriculturalFieldMapper {
             coords[i] = new Coordinate(point.get(0), point.get(1));
         }
 
+        // Проверяем, замкнут ли полигон (первая и последняя точки должны совпадать)
+        if (coords.length > 1 && !coords[0].equals2D(coords[coords.length - 1])) {
+            // Создаем новый массив с дополнительной точкой
+            Coordinate[] closedCoords = new Coordinate[coords.length + 1];
+            System.arraycopy(coords, 0, closedCoords, 0, coords.length);
+            closedCoords[coords.length] = new Coordinate(coords[0].x, coords[0].y);
+            coords = closedCoords;
+        }
+
         LinearRing ring = geometryFactory.createLinearRing(coords);
         return geometryFactory.createPolygon(ring, null);
     }
@@ -63,6 +72,15 @@ public interface AgriculturalFieldMapper {
             for (int j = 0; j < polygonCoords.size(); j++) {
                 List<Double> point = polygonCoords.get(j);
                 coords[j] = new Coordinate(point.get(0), point.get(1));
+            }
+
+            // Проверяем, замкнут ли полигон (первая и последняя точки должны совпадать)
+            if (coords.length > 1 && !coords[0].equals2D(coords[coords.length - 1])) {
+                // Создаем новый массив с дополнительной точкой
+                Coordinate[] closedCoords = new Coordinate[coords.length + 1];
+                System.arraycopy(coords, 0, closedCoords, 0, coords.length);
+                closedCoords[coords.length] = new Coordinate(coords[0].x, coords[0].y);
+                coords = closedCoords;
             }
 
             LinearRing ring = geometryFactory.createLinearRing(coords);

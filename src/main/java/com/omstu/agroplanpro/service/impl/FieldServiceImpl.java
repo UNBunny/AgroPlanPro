@@ -10,6 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -22,5 +25,11 @@ public class FieldServiceImpl implements FieldService {
         AgriculturalField savedField = fieldRepository.save(field);
         log.info("Agricultural field created with ID: {}", savedField.getId());
         return fieldMapper.toResponse(savedField);
+    }
+
+    public List<AgriculturalFieldResponse> getAllFields() {
+        return fieldRepository.findAll().stream()
+                .map(fieldMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }

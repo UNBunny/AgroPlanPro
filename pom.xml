@@ -53,7 +53,7 @@
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-spatial</artifactId>
-            <version>5.6.15.Final</version>
+            <version>6.6.29.Final</version>
         </dependency>
 
         <dependency>
