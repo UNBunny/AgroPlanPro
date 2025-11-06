@@ -32,4 +32,10 @@ public class FieldServiceImpl implements FieldService {
                 .map(fieldMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    public AgriculturalFieldResponse getFieldById(Long id) {
+        AgriculturalField field = fieldRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Field not found with id: " + id));
+        return fieldMapper.toResponse(field);
+    }
 }
