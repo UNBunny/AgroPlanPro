@@ -28,10 +28,10 @@ public class AgriculturalField {
 
     private String status;
 
-    @Column(columnDefinition = "geometry(Polygon, 4326)")
+    @Column(columnDefinition = "Polygon, 4326")
     private Polygon geom;
 
-    @Column(columnDefinition = "geometry(MultiPolygon, 4326)")
+    @Column(columnDefinition = "MultiPolygon, 4326")
     private MultiPolygon holes;
 
     @Column(name = "area_hectares", columnDefinition = "NUMERIC(12,2)")

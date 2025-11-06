@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 interface FieldFormProps {
   onCreateField: (name: string, cropType: string, status: string) => void
@@ -34,14 +34,6 @@ function FieldForm({
   const [fieldName, setFieldName] = useState("")
   const [cropType, setCropType] = useState("")
   const [status, setStatus] = useState("Активное")
-
-  useEffect(() => {
-    console.log("FieldForm монтирован", { hasPolygon, isDrawing });
-  }, []);
-
-  useEffect(() => {
-    console.log("FieldForm обновлен", { hasPolygon, isDrawing, loading, currentArea });
-  }, [hasPolygon, isDrawing, loading, currentArea]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

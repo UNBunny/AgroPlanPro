@@ -222,19 +222,47 @@ export function FieldMap({
         onHoleUpdate={onHoleUpdate}
       />
 
-      {/* Существующие поля */}
-      {fields.map((field) => (
-        <Polygon
-          key={field.id}
-          positions={getPolygonPositions(field.coordinates)}
-          pathOptions={{
-            fillColor: '#27ae60',
-            fillOpacity: 0.3,
-            color: '#27ae60',
-            weight: 2
-          }}
-        />
-      ))}
+        {/* Существующие поля с дырками */}
+        {fields.map((field) => {
+            // Преобразуем координаты основного полигона для Leaflet
+            const mainPolygonCoords = getPolygonPositions(field.coordinates);
+
+            // Если у поля есть дырки
+            if (field.holes && field.holes.length > 0) {
+                // Создаем массив, где первый элемент - основной полигон, остальные - дырки
+                const allPolygons = [
+                    mainPolygonCoords,
+                    ...field.holes.map(hole => getPolygonPositions(hole))
+                ];
+
+                return (
+                    <Polygon
+                        key={field.id}
+                        positions={allPolygons}
+                        pathOptions={{
+                            fillColor: '#27ae60',
+                            fillOpacity: 0.3,
+                            color: '#27ae60',
+                            weight: 2
+                        }}
+                    />
+                );
+            } else {
+                // Если дырок нет, просто отображаем основной полигон
+                return (
+                    <Polygon
+                        key={field.id}
+                        positions={mainPolygonCoords}
+                        pathOptions={{
+                            fillColor: '#27ae60',
+                            fillOpacity: 0.3,
+                            color: '#27ae60',
+                            weight: 2
+                        }}
+                    />
+                );
+            }
+        })}
 
       {/* Предварительный полигон основного поля */}
       {currentPolygon.length >= 3 && (

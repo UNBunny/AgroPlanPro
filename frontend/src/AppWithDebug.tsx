@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FieldMap, calculateFieldArea } from './components/FieldMap'
-import FieldForm from './components/FieldForm'
+import FieldForm from './components/FieldFormWithDebug' // Используем форму с отладкой
 import FieldList from './components/FieldList'
 import { Field } from './types/Field'
 import { fieldService } from './services/fieldService'
@@ -20,12 +20,14 @@ function App() {
 
   // Загрузка полей при монтировании компонента
   useEffect(() => {
+    console.log("[App] Компонент App монтирован, загружаем поля")
     loadFields()
   }, [])
 
   // Автоматический пересчет площади при изменении полигона или дырок
   useEffect(() => {
     if (currentPolygon.length >= 3) {
+      console.log("[App] Пересчитываем площадь, полигон изменился:", currentPolygon)
       // Включаем текущую создаваемую дырку в расчет, если у неё достаточно точек
       const allHoles = [...currentHoles]
       if (currentHole.length >= 3) {
@@ -33,6 +35,7 @@ function App() {
       }
       
       const area = calculateFieldArea(currentPolygon, allHoles)
+      console.log("[App] Рассчитанная площадь:", area)
       setCurrentArea(area)
     } else {
       setCurrentArea(0)
@@ -41,55 +44,78 @@ function App() {
 
   const loadFields = async () => {
     try {
+      console.log("[App] Начинаем загрузку полей")
       setLoading(true)
       const data = await fieldService.getAllFields()
+      console.log("[App] Поля успешно загружены:", data)
       setFields(data)
       setError(null)
     } catch (err) {
+      console.error("[App] Ошибка при загрузке полей:", err)
       setError('Ошибка при загрузке полей')
-      console.error('Error loading fields:', err)
     } finally {
       setLoading(false)
     }
   }
 
   const handleCreateField = async (fieldName: string, cropType: string, status: string) => {
+    console.log("[App] handleCreateField вызван с параметрами:", { fieldName, cropType, status })
+    
     if (currentPolygon.length < 3) {
+      console.error("[App] Недостаточно точек для создания поля:", currentPolygon.length)
       setError('Для создания поля необходимо выделить область на карте (минимум 3 точки)')
       return
     }
 
     try {
+      console.log("[App] Начинаем создание поля")
       setLoading(true)
       
       // Автоматически вычисляем площадь
       const calculatedArea = calculateFieldArea(currentPolygon, currentHoles)
+      console.log("[App] Рассчитанная площадь:", calculatedArea)
       
-      const newField = await fieldService.createField({
+      const fieldData = {
         fieldName,
         crop_type: cropType,
         status,
         areaHectares: Math.round(calculatedArea * 100) / 100, // округляем до 2 знаков
         coordinates: currentPolygon,
         holes: currentHoles.length > 0 ? currentHoles : undefined
-      })
+      };
       
-      setFields(prev => [newField, ...prev])
-      setCurrentPolygon([])
-      setCurrentHoles([])
-      setIsDrawing(false)
-      setIsCreatingHole(false)
-      setCurrentHole([])
-      setError(null)
-    } catch (err) {
-      setError('Ошибка при создании поля')
-      console.error('Error creating field:', err)
+      console.log("[App] Отправляем данные на сервер:", JSON.stringify(fieldData))
+      
+      try {
+        const newField = await fieldService.createField(fieldData)
+        console.log("[App] Поле успешно создано:", newField)
+        
+        setFields(prev => [newField, ...prev])
+        setCurrentPolygon([])
+        setCurrentHoles([])
+        setIsDrawing(false)
+        setIsCreatingHole(false)
+        setCurrentHole([])
+        setError(null)
+      } catch (apiError: any) {
+        console.error("[App] Ошибка API при создании поля:", apiError)
+        if (apiError.response) {
+          console.error("[App] Ошибка ответа:", apiError.response.status, apiError.response.data)
+        }
+        throw apiError
+      }
+      
+    } catch (err: any) {
+      console.error("[App] Ошибка при создании поля:", err.message || err)
+      setError(`Ошибка при создании поля: ${err.message || "Неизвестная ошибка"}`)
     } finally {
+      console.log("[App] Завершаем процесс создания поля")
       setLoading(false)
     }
   }
 
   const handleStartDrawing = () => {
+    console.log("[App] Начинаем рисование поля")
     setIsDrawing(true)
     setCurrentPolygon([])
     setCurrentArea(0)
@@ -100,6 +126,7 @@ function App() {
   }
 
   const handleCancelDrawing = () => {
+    console.log("[App] Отменяем рисование поля")
     setIsDrawing(false)
     setIsCreatingHole(false)
     setCurrentPolygon([])
@@ -110,6 +137,7 @@ function App() {
 
   // Обработчики для дырок
   const handleStartCreatingHole = () => {
+    console.log("[App] Начинаем создание отверстия")
     if (currentPolygon.length >= 3) {
       setIsCreatingHole(true)
       setCurrentHole([])
@@ -120,6 +148,7 @@ function App() {
   }
 
   const handleFinishCreatingHole = () => {
+    console.log("[App] Завершаем создание отверстия")
     if (currentHole.length >= 3) {
       setCurrentHoles(prev => [...prev, currentHole])
       setCurrentHole([])
@@ -128,6 +157,7 @@ function App() {
   }
 
   const handleCancelCreatingHole = () => {
+    console.log("[App] Отменяем создание отверстия")
     setIsCreatingHole(false)
     setCurrentHole([])
   }

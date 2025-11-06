@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 interface FieldFormProps {
   onCreateField: (name: string, cropType: string, status: string) => void
@@ -35,30 +35,44 @@ function FieldForm({
   const [cropType, setCropType] = useState("")
   const [status, setStatus] = useState("Активное")
 
-  useEffect(() => {
-    console.log("FieldForm монтирован", { hasPolygon, isDrawing });
-  }, []);
-
-  useEffect(() => {
-    console.log("FieldForm обновлен", { hasPolygon, isDrawing, loading, currentArea });
-  }, [hasPolygon, isDrawing, loading, currentArea]);
+  // Логирование пропсов для отладки
+  console.log("[FieldForm] Пропсы:", { 
+    isDrawing, hasPolygon, currentArea, loading, isCreatingHole, hasHole, holesCount
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[FieldForm] Форма отправлена:", { fieldName, cropType, status })
     
     if (!fieldName.trim()) {
       alert("Введите название поля")
+      console.error("[FieldForm] Ошибка: имя поля не указано")
       return
     }
     
-    onCreateField(
-      fieldName.trim(), 
-      cropType.trim() || "Не указана", 
-      status.trim() || "Активное"
-    )
-    setFieldName("")
-    setCropType("")
-    setStatus("Активное")
+    try {
+      console.log("[FieldForm] Вызываем onCreateField с параметрами:", {
+        fieldName: fieldName.trim(), 
+        cropType: cropType.trim() || "Не указана", 
+        status: status.trim() || "Активное"
+      })
+      
+      onCreateField(
+        fieldName.trim(), 
+        cropType.trim() || "Не указана", 
+        status.trim() || "Активное"
+      )
+      
+      console.log("[FieldForm] onCreateField вызван успешно")
+      
+      setFieldName("")
+      setCropType("")
+      setStatus("Активное")
+      
+      console.log("[FieldForm] Форма очищена после отправки")
+    } catch (error) {
+      console.error("[FieldForm] Ошибка при вызове onCreateField:", error)
+    }
   }
 
   const getStatusMessage = () => {
@@ -81,7 +95,10 @@ function FieldForm({
       {!isDrawing && (
         <div className="action-section">
           <button 
-            onClick={onStartDrawing}
+            onClick={() => {
+              console.log("[FieldForm] Нажата кнопка 'Начать выделение поля'")
+              onStartDrawing()
+            }}
             className="btn btn-primary"
             style={{ width: "100%", padding: "1rem" }}
           >
@@ -112,7 +129,10 @@ function FieldForm({
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <button 
               type="button" 
-              onClick={onCancelDrawing}
+              onClick={() => {
+                console.log("[FieldForm] Нажата кнопка 'Отменить'")
+                onCancelDrawing()
+              }}
               className="btn"
               style={{ backgroundColor: "#e74c3c", color: "white", flex: 1 }}
             >
@@ -130,7 +150,10 @@ function FieldForm({
               )}
               <button 
                 type="button" 
-                onClick={onStartCreatingHole}
+                onClick={() => {
+                  console.log("[FieldForm] Нажата кнопка 'Добавить отверстие'")
+                  onStartCreatingHole()
+                }}
                 className="btn"
                 style={{ backgroundColor: "#f39c12", color: "white", width: "100%" }}
               >
@@ -146,7 +169,10 @@ function FieldForm({
                 {hasHole && onFinishCreatingHole && (
                   <button 
                     type="button" 
-                    onClick={onFinishCreatingHole}
+                    onClick={() => {
+                      console.log("[FieldForm] Нажата кнопка 'Готово' (отверстие)")
+                      onFinishCreatingHole()
+                    }}
                     className="btn"
                     style={{ backgroundColor: "#27ae60", color: "white", flex: 1 }}
                   >
@@ -156,7 +182,10 @@ function FieldForm({
                 {onCancelCreatingHole && (
                   <button 
                     type="button" 
-                    onClick={onCancelCreatingHole}
+                    onClick={() => {
+                      console.log("[FieldForm] Нажата кнопка 'Отмена' (отверстие)")
+                      onCancelCreatingHole()
+                    }}
                     className="btn"
                     style={{ backgroundColor: "#e74c3c", color: "white", flex: 1 }}
                   >
@@ -168,7 +197,13 @@ function FieldForm({
           )}
 
           {hasPolygon && !isCreatingHole && (
-            <form onSubmit={handleSubmit} style={{ marginTop: "1.5rem" }}>
+            <form 
+              onSubmit={(e) => {
+                console.log("[FieldForm] Форма отправлена (событие onSubmit)")
+                handleSubmit(e)
+              }} 
+              style={{ marginTop: "1.5rem" }}
+            >
               <h3>📋 Данные поля</h3>
               
               <div className="form-group">
@@ -220,6 +255,7 @@ function FieldForm({
                 type="submit" 
                 className="btn btn-success"
                 disabled={loading || !fieldName.trim()}
+                onClick={() => console.log("[FieldForm] Нажата кнопка 'Сохранить поле'")}
               >
                 {loading ? "⏳ Сохранение..." : "💾 Сохранить поле"}
               </button>

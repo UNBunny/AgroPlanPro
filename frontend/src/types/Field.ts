@@ -1,16 +1,18 @@
 export interface Field {
   id: number
-  name: string
-  area: number
+  fieldName: string
+  crop_type: string
+  status: string
   coordinates: number[][]
-  holes?: number[][][]  // массив отверстий (дырок) в поле
-  createdAt: string
-  updatedAt: string
+  holes?: number[][][]
+  areaHectares: number
 }
 
 export interface FieldCreateRequest {
-  name: string
-  area: number
+  fieldName: string
+  crop_type: string
+  status: string
   coordinates: number[][]
-  holes?: number[][][]  // опциональные отверстия
+  holes?: number[][][]
+  areaHectares: number
 }
