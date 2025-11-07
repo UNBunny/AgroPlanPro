@@ -10,7 +10,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>AgricultureField</artifactId>
+    <artifactId>agriculture-field-service</artifactId>
     <name>AgricultureField</name>
     <description>Agriculture Field Service</description>
 
