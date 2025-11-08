@@ -9,5 +9,4 @@ public record AgriculturalFieldRequest(
         List<List<Double>> coordinates,
         List<List<List<Double>>> holes,
         Double areaHectares) {
-
 }
