@@ -1,22 +1,10 @@
-logging:
-  level:
-    org:
-      springframework:
-        transaction: INFO
-        transaction.interceptor: TRACE
-      orm:
-        jpa: INFO
-        jpa.JpaTransactionManager: DEBUG
-      hibernate:
-        SQL: DEBUG
-        type:
-          descriptor:
-            sql:
-              BasicBinder: TRACE
+server:
+  port: 8081
+
 
 spring:
   application:
-    name: AgricultureField
+    name: agriculture-field-service
   jpa:
     show-sql: true
     hibernate:
@@ -41,3 +29,32 @@ spring:
   sql:
     init:
       mode: always
+
+logging:
+  level:
+    org:
+      springframework:
+        transaction: INFO
+        transaction.interceptor: TRACE
+      orm:
+        jpa: INFO
+        jpa.JpaTransactionManager: DEBUG
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true  # Использовать IP вместо hostname
+    instance-id: ${spring.application.name}:${server.port}
+
+    register-with-eureka: true
+    fetch-registry: true
