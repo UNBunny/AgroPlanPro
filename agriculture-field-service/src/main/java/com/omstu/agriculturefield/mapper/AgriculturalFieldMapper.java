@@ -24,6 +24,11 @@ public interface AgriculturalFieldMapper {
     @Mapping(target = "holes", source = "holes", qualifiedByName = "listToMultiPolygon")
     AgriculturalField toEntity(AgriculturalFieldRequest request);
 
+    @Mapping(target = "id", source = "id")
+    @Mapping(target = "geom", source = "request.coordinates", qualifiedByName = "listToPolygon")
+    @Mapping(target = "holes", source = "request.holes", qualifiedByName = "listToMultiPolygon")
+    AgriculturalField toEntityWithId(Long id, AgriculturalFieldRequest request);
+
     @Mapping(target = "coordinates", source = "geom", qualifiedByName = "polygonToList")
     @Mapping(target = "holes", source = "holes", qualifiedByName = "multiPolygonToList")
     AgriculturalFieldResponse toResponse(AgriculturalField field);
