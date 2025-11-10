@@ -20,6 +20,7 @@ public class FieldServiceImpl implements FieldService {
     private final AgriculturalFieldRepository fieldRepository;
     private final AgriculturalFieldMapper fieldMapper;
 
+    @Override
     public AgriculturalFieldResponse createField(AgriculturalFieldRequest request) {
         AgriculturalField field = fieldMapper.toEntity(request);
         AgriculturalField savedField = fieldRepository.save(field);
@@ -27,15 +28,34 @@ public class FieldServiceImpl implements FieldService {
         return fieldMapper.toResponse(savedField);
     }
 
+    @Override
     public List<AgriculturalFieldResponse> getAllFields() {
+
         return fieldRepository.findAll().stream()
                 .map(fieldMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
+    @Override
     public AgriculturalFieldResponse getFieldById(Long id) {
         AgriculturalField field = fieldRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Field not found with id: " + id));
         return fieldMapper.toResponse(field);
+    }
+
+    @Override
+    public AgriculturalFieldResponse updateField(Long id, AgriculturalFieldRequest request) {
+        AgriculturalField field = fieldRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Field not found with id: " + id));
+        AgriculturalField updatedField = fieldMapper.toEntityWithId(id, request);
+        fieldRepository.save(updatedField);
+        log.info("Agricultural field updated with ID: {}", updatedField.getId());
+        return fieldMapper.toResponse(updatedField);
+    }
+
+    @Override
+    public void deleteField(Long id) {
+        fieldRepository.deleteById(id);
+        log.info("Agricultural field deleted with ID: {}", id);
     }
 }
