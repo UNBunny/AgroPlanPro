@@ -16,6 +16,10 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
+
+// НЕ ЗАБЫТЬ ДОБАВИТЬ ОГРАНИЧЕНИЕ (01.01.2016 ГОД -> ВСЕ ЧТО МЕНЬШЕ 2016 НЕ КИДАТЬ ЗАПРОС)
+
+
 @Service
 @Slf4j
 public class OpenMeteoService implements ExternalFieldService {
@@ -23,10 +27,8 @@ public class OpenMeteoService implements ExternalFieldService {
     private final WebClient forecastWebClient;
     private final WebClient historicalWebClient;
     private final OpenMeteoMapper openMeteoMapper;
-    ;
 
-
-    public OpenMeteoService(WebClient.Builder webClientBuilder, WebClient.Builder historicalWebClient, OpenMeteoMapper openMeteoMapper) {
+    public OpenMeteoService(WebClient.Builder webClientBuilder, OpenMeteoMapper openMeteoMapper) {
         this.forecastWebClient = webClientBuilder
                 .baseUrl("https://api.open-meteo.com/v1")
                 .build();
@@ -59,7 +61,7 @@ public class OpenMeteoService implements ExternalFieldService {
                 start.until(end).toTotalMonths(), monthlyRanges.size());
 
         return Flux.fromIterable(monthlyRanges)
-                .delayElements(Duration.ofSeconds(0))
+                .delayElements(Duration.ofMillis(200))
                 .flatMap(range ->
                         makeSingleRequest(lat, lon, WeatherRequestType.HISTORIC, null,
                                 range.startDate().toString(), range.endDate().toString())
