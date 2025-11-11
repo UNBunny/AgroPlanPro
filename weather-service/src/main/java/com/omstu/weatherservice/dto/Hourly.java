@@ -7,17 +7,19 @@ public record Hourly(
         List<String> time,
 
         // Температура и влажность воздуха
-        List<Double> temperature_2m, List<Double> relative_humidity_2m, List<Double> surface_pressure,
+        List<Double> temperature_2m, List<Double> relative_humidity_2m,
+        List<Double> surface_pressure, List<Double> dew_point_2m,
 
         // Осадки
-        List<Double> precipitation, List<Double> rain, List<Double> snowfall,
+        List<Double> precipitation, List<Double> rain, List<Double> snowfall, List<Double> precipitation_probability,
 
         // Ветер
-        List<Double> wind_speed_10m,
+        List<Double> wind_speed_10m, List<Double> wind_gusts_10m, List<Integer> wind_direction_10m,
 
         // Солнце
         List<Double> shortwave_radiation,
         List<Double> uv_index,
+        List<Integer> sunshine_duration,
 
         // Температура почвы (мб лишние удалю)
         List<Double> soil_temperature_0cm,
