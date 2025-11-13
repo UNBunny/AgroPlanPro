@@ -34,6 +34,7 @@ public class OpenMeteoService implements ExternalFieldService {
                 .build();
 
         this.historicalWebClient = webClientBuilder
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(10 * 1024 * 1024)) // 10MB
                 .baseUrl("https://historical-forecast-api.open-meteo.com/v1")
                 .build();
         this.openMeteoMapper = openMeteoMapper;
@@ -61,8 +62,8 @@ public class OpenMeteoService implements ExternalFieldService {
                 start.until(end).toTotalMonths(), monthlyRanges.size());
 
         return Flux.fromIterable(monthlyRanges)
-                .delayElements(Duration.ofMillis(200))
-                .flatMap(range ->
+
+                .concatMap(range ->
                         makeSingleRequest(lat, lon, WeatherRequestType.HISTORIC, null,
                                 range.startDate().toString(), range.endDate().toString())
                                 .onErrorResume(e -> {
@@ -84,12 +85,15 @@ public class OpenMeteoService implements ExternalFieldService {
                                     .path("/forecast")
                                     .queryParam("latitude", lat)
                                     .queryParam("longitude", lon)
-                                    .queryParam("hourly", "temperature_2m,relative_humidity_2m,surface_pressure," +
+                                    .queryParam("hourly", "temperature_2m,dew_point_2m,precipitation_probability," +
+                                            "relative_humidity_2m,surface_pressure,wind_gusts_10m,sunshine_duration,wind_direction_10m" +
                                             "precipitation,rain,snowfall,wind_speed_10m,shortwave_radiation,uv_index," +
                                             "soil_temperature_0cm,soil_temperature_6cm,soil_temperature_18cm,soil_temperature_54cm," +
                                             "soil_moisture_0_to_1cm,soil_moisture_1_to_3cm,soil_moisture_3_to_9cm," +
                                             "soil_moisture_9_to_27cm,soil_moisture_27_to_81cm")
-                                    .queryParam("daily", "temperature_2m_max,temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration")
+                                    .queryParam("daily", "temperature_2m_max,temperature_2m_min,precipitation_sum," +
+                                            "et0_fao_evapotranspiration,temperature_2m_mean,relative_humidity_2m_min,relative_humidity_2m_mean," +
+                                            "wind_speed_10m_max,wind_gusts_10m_max,shortwave_radiation_sum,sunshine_duration")
                                     .queryParam("timezone", "auto");
 
                             if (type == WeatherRequestType.HISTORIC) {

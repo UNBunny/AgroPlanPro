@@ -28,7 +28,8 @@ public interface OpenMeteoMapper {
         );
 
         Daily combinedDaily = DailyMapper.INSTANCE.combineDailyList(
-                responses.stream().map(OpenMeteoResponse::daily).toList()
+                responses.stream().map(OpenMeteoResponse::daily).toList(),
+                responses.stream().map(OpenMeteoResponse::hourly).toList()
         );
 
         return new OpenMeteoResponse(
