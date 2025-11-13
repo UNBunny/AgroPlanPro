@@ -47,15 +47,15 @@ logging:
             sql:
               BasicBinder: TRACE
 
-#eureka:
-#  client:
-#    service-url:
-#      defaultZone: http://localhost:8761/eureka/
-#    register-with-eureka: true
-#    fetch-registry: true
-#  instance:
-#    prefer-ip-address: true  # ???????????? IP ?????? hostname
-#    instance-id: ${spring.application.name}:${server.port}
-#
-#    register-with-eureka: true
-#    fetch-registry: true
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true  # ???????????? IP ?????? hostname
+    instance-id: ${spring.application.name}:${server.port}
+
+    register-with-eureka: true
+    fetch-registry: true
