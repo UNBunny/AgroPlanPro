@@ -19,12 +19,12 @@ public class OpenMeteoController {
         this.openMeteoService = openMeteoService;
     }
 
-    @GetMapping
+    @GetMapping("/ml")
     public Mono<OpenMeteoResponse> getWeather(@RequestParam Double lat, @RequestParam Double lon, @RequestParam Integer days) {
         return openMeteoService.getWeather(lat, lon, WeatherRequestType.FORECAST, days, null, null);
     }
 
-    @GetMapping("/historic-data")
+    @GetMapping("ml/historic-data")
     public Mono<OpenMeteoResponse> getHistoricWeather(
             @RequestParam Double lat, @RequestParam Double lon,
             @RequestParam("start_date") String startDate, @RequestParam("end_date") String endDate) {
