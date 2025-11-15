@@ -21,6 +21,7 @@
         <module>api-gateway</module>
         <module>eureka-server</module>
         <module>agriculture-field-service</module>
+        <module>weather-service</module>
     </modules>
 
     <properties>
@@ -45,10 +46,10 @@
 
     <dependencies>
 
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.cloud</groupId>-->
+<!--            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>-->
+<!--        </dependency>-->
 
         <dependency>
             <groupId>org.mapstruct</groupId>
