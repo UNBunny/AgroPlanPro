@@ -8,7 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
 
 @Mapper(componentModel = "spring")
 public interface DailyMapper {
@@ -21,95 +24,111 @@ public interface DailyMapper {
             return null;
         }
 
-        // Сначала собираем все daily данные
-        List<String> combinedTime = new ArrayList<>();
-        List<Double> combinedTemperatureMax = new ArrayList<>();
-        List<Double> combinedTemperatureMin = new ArrayList<>();
-        List<Double> combinedPrecipitationSum = new ArrayList<>();
-        List<Double> combinedReferenceEvapotranspiration = new ArrayList<>();
-        List<Double> combinedTemperatureMean = new ArrayList<>();
-        List<Double> combinedRelativeHumidityMean = new ArrayList<>();
-        List<Double> combinedRelativeHumidityMin = new ArrayList<>();
-        List<Double> combinedWindSpeedMax = new ArrayList<>();
-        List<Double> combinedWindGustsMax = new ArrayList<>();
-        List<Double> combinedShortwaveRadiationSum = new ArrayList<>();
-        List<Integer> combinedSunshineDuration = new ArrayList<>();
+        CombinedDailyData combinedData = combineDailyData(dailyList);
+        Map<String, HourlyDataForDate> hourlyByDate = groupHourlyDataByDate(hourlyList);
+        SoilParameters soilParams = calculateSoilParameters(combinedData.time, hourlyByDate);
+
+        return buildDaily(combinedData, soilParams);
+    }
+
+    private CombinedDailyData combineDailyData(List<Daily> dailyList) {
+        CombinedDailyData data = new CombinedDailyData();
 
         for (Daily daily : dailyList) {
             if (daily != null) {
-                combineLists(combinedTime, daily.time());
-                combineLists(combinedTemperatureMax, daily.temperatureMax());
-                combineLists(combinedTemperatureMin, daily.temperatureMin());
-                combineLists(combinedPrecipitationSum, daily.precipitationSum());
-                combineLists(combinedReferenceEvapotranspiration, daily.referenceEvapotranspiration());
-                combineLists(combinedTemperatureMean, daily.temperatureMean());
-                combineLists(combinedRelativeHumidityMean, daily.relativeHumidityMean());
-                combineLists(combinedRelativeHumidityMin, daily.relativeHumidityMin());
-                combineLists(combinedWindSpeedMax, daily.windSpeedMax());
-                combineLists(combinedWindGustsMax, daily.windGustsMax());
-                combineLists(combinedShortwaveRadiationSum, daily.shortwaveRadiationSum());
-                combineLists(combinedSunshineDuration, daily.sunshineDuration());
+                combineLists(data.time, daily.time());
+                combineLists(data.temperatureMax, daily.temperatureMax());
+                combineLists(data.temperatureMin, daily.temperatureMin());
+                combineLists(data.precipitationSum, daily.precipitationSum());
+                combineLists(data.referenceEvapotranspiration, daily.referenceEvapotranspiration());
+                combineLists(data.temperatureMean, daily.temperatureMean());
+                combineLists(data.relativeHumidityMean, daily.relativeHumidityMean());
+                combineLists(data.relativeHumidityMin, daily.relativeHumidityMin());
+                combineLists(data.windSpeedMax, daily.windSpeedMax());
+                combineLists(data.windGustsMax, daily.windGustsMax());
+                combineLists(data.shortwaveRadiationSum, daily.shortwaveRadiationSum());
+                combineLists(data.sunshineDuration, daily.sunshineDuration());
             }
         }
 
-        // Теперь рассчитываем почвенные параметры для КАЖДОГО дня
-        List<Double> soilTemperature0cmMean = new ArrayList<>();
-        List<Double> soilTemperature6cmMean = new ArrayList<>();
-        List<Double> soilMoisture0to1cmMean = new ArrayList<>();
+        return data;
+    }
 
-        for (String date : combinedTime) {
-            logger.info("Calculating soil parameters for date: {}", date);
+    private Map<String, HourlyDataForDate> groupHourlyDataByDate(List<Hourly> hourlyList) {
+        Map<String, HourlyDataForDate> result = new HashMap<>();
 
-            List<Double> dailyTemp0cm = new ArrayList<>();
-            List<Double> dailyTemp6cm = new ArrayList<>();
-            List<Double> dailyMoisture = new ArrayList<>();
+        for (Hourly hourly : hourlyList) {
+            if (hourly == null || hourly.time() == null) continue;
 
-            // Собираем все почасовые данные за текущую дату
-            for (Hourly hourly : hourlyList) {
-                if (hourly != null && hourly.time() != null) {
-                    for (int i = 0; i < hourly.time().size(); i++) {
-                        String hourlyTime = hourly.time().get(i);
-                        if (hourlyTime.startsWith(date)) {
-                            if (hourly.soilTemperature0cm() != null && i < hourly.soilTemperature0cm().size()) {
-                                dailyTemp0cm.add(hourly.soilTemperature0cm().get(i));
-                            }
-                            if (hourly.soilTemperature6cm() != null && i < hourly.soilTemperature6cm().size()) {
-                                dailyTemp6cm.add(hourly.soilTemperature6cm().get(i));
-                            }
-                            if (hourly.soilMoisture0To1Cm() != null && i < hourly.soilMoisture0To1Cm().size()) {
-                                dailyMoisture.add(hourly.soilMoisture0To1Cm().get(i));
-                            }
-                        }
-                    }
-                }
-            }
 
-            soilTemperature0cmMean.add(calculateAverage(dailyTemp0cm));
-            soilTemperature6cmMean.add(calculateAverage(dailyTemp6cm));
-            soilMoisture0to1cmMean.add(calculateAverage(dailyMoisture));
+            IntStream.range(0, hourly.time().size()).forEach(i -> {
+                String hourlyTime = hourly.time().get(i);
+                String date = hourlyTime.substring(0, 10);
+
+                result.computeIfAbsent(date, k -> new HourlyDataForDate());
+                HourlyDataForDate dateData = result.get(date);
+
+                addIfPresent(dateData.temp0cm, hourly.soilTemperature0cm(), i);
+                addIfPresent(dateData.temp6cm, hourly.soilTemperature6cm(), i);
+                addIfPresent(dateData.moisture, hourly.soilMoisture0To1Cm(), i);
+            });
+        }
+        // ДОБАВЬТЕ ЭТО ЛОГИРОВАНИЕ
+        result.forEach((date, data) -> {
+            logger.info("Date {}: temp0cm count={}, temp6cm count={}, moisture count={}",
+                    date, data.temp0cm.size(), data.temp6cm.size(), data.moisture.size());
+        });
+
+        return result;
+    }
+
+    private void addIfPresent(List<Double> target, List<Double> source, int index) {
+        if (source != null && index < source.size()) {
+            target.add(source.get(index));
+        }
+    }
+
+    private SoilParameters calculateSoilParameters(List<String> dates, Map<String, HourlyDataForDate> hourlyByDate) {
+        SoilParameters params = new SoilParameters();
+
+        for (String date : dates) {
+            HourlyDataForDate hourlyData = hourlyByDate.getOrDefault(date, new HourlyDataForDate());
+
+            double avgTemp0cm = calculateAverage(hourlyData.temp0cm);
+            double avgTemp6cm = calculateAverage(hourlyData.temp6cm);
+            double avgMoisture = calculateAverage(hourlyData.moisture);
+
+            params.temperature0cm.add(avgTemp0cm);
+            params.temperature6cm.add(avgTemp6cm);
+            params.moisture.add(avgMoisture);
 
             logger.info("Soil params for {}: temp0cm={}, temp6cm={}, moisture={}",
-                    date, calculateAverage(dailyTemp0cm), calculateAverage(dailyTemp6cm), calculateAverage(dailyMoisture));
+                    date, avgTemp0cm, avgTemp6cm, avgMoisture);
         }
 
+        return params;
+    }
+
+    private Daily buildDaily(CombinedDailyData data, SoilParameters soil) {
         return new Daily(
-                combinedTime,
-                combinedTemperatureMax,
-                combinedTemperatureMin,
-                combinedPrecipitationSum,
-                combinedReferenceEvapotranspiration,
-                combinedTemperatureMean,
-                combinedRelativeHumidityMean,
-                combinedRelativeHumidityMin,
-                combinedWindSpeedMax,
-                combinedWindGustsMax,
-                combinedShortwaveRadiationSum,
-                combinedSunshineDuration,
-                soilTemperature0cmMean,
-                soilTemperature6cmMean,
-                soilMoisture0to1cmMean
+                data.time,
+                data.temperatureMax,
+                data.temperatureMin,
+                data.temperatureMean,
+                data.relativeHumidityMean,
+                data.relativeHumidityMin,
+                data.precipitationSum,
+                data.referenceEvapotranspiration,
+                data.windSpeedMax,
+                data.windGustsMax,
+                data.shortwaveRadiationSum,
+                data.sunshineDuration,
+                soil.temperature0cm,
+                soil.temperature6cm,
+                soil.moisture
         );
     }
+
 
     private double calculateAverage(List<Double> values) {
         if (values == null || values.isEmpty()) {
@@ -125,5 +144,32 @@ public interface DailyMapper {
         if (source != null) {
             target.addAll(source);
         }
+    }
+
+    class CombinedDailyData {
+        List<String> time = new ArrayList<>();
+        List<Double> temperatureMax = new ArrayList<>();
+        List<Double> temperatureMin = new ArrayList<>();
+        List<Double> precipitationSum = new ArrayList<>();
+        List<Double> referenceEvapotranspiration = new ArrayList<>();
+        List<Double> temperatureMean = new ArrayList<>();
+        List<Double> relativeHumidityMean = new ArrayList<>();
+        List<Double> relativeHumidityMin = new ArrayList<>();
+        List<Double> windSpeedMax = new ArrayList<>();
+        List<Double> windGustsMax = new ArrayList<>();
+        List<Double> shortwaveRadiationSum = new ArrayList<>();
+        List<Integer> sunshineDuration = new ArrayList<>();
+    }
+
+    class HourlyDataForDate {
+        List<Double> temp0cm = new ArrayList<>();
+        List<Double> temp6cm = new ArrayList<>();
+        List<Double> moisture = new ArrayList<>();
+    }
+
+    class SoilParameters {
+        List<Double> temperature0cm = new ArrayList<>();
+        List<Double> temperature6cm = new ArrayList<>();
+        List<Double> moisture = new ArrayList<>();
     }
 }

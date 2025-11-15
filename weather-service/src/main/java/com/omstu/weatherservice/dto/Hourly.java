@@ -15,11 +15,11 @@ public record Hourly(
         @JsonProperty("relative_humidity_2m")
         List<Double> relativeHumidity,
 
-        @JsonProperty("surface_pressure")
-        List<Double> surfacePressure,
-
         @JsonProperty("dew_point_2m")
         List<Double> dewPoint,
+
+        @JsonProperty("surface_pressure")
+        List<Double> surfacePressure,
 
         // Осадки
         @JsonProperty("precipitation")
@@ -33,6 +33,7 @@ public record Hourly(
 
         @JsonProperty("precipitation_probability")
         List<Double> precipitationProbability,
+
         // Ветер
         @JsonProperty("wind_speed_10m")
         List<Double> windSpeed,
@@ -53,7 +54,7 @@ public record Hourly(
         @JsonProperty("sunshine_duration")
         List<Integer> sunshineDuration,
 
-        // Температура почвы (мб лишние удалю)
+        // Температура почвы
         @JsonProperty("soil_temperature_0cm")
         List<Double> soilTemperature0cm,
 
@@ -66,7 +67,7 @@ public record Hourly(
         @JsonProperty("soil_temperature_54cm")
         List<Double> soilTemperature54cm,
 
-        // Влажность почвы (тоже возможно лишнее есть)
+        // Влажность почвы
         @JsonProperty("soil_moisture_0_to_1cm")
         List<Double> soilMoisture0To1Cm,
 
@@ -81,6 +82,5 @@ public record Hourly(
 
         @JsonProperty("soil_moisture_27_to_81cm")
         List<Double> soilMoisture27To81Cm
-
 ) {
 }
