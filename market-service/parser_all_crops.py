@@ -93,7 +93,9 @@ CROP_CLASSES = {
 }
 
 # Максимум страниц для тестирования (None = все страницы)
-MAX_PAGES_PER_YEAR = None  # Измените на число для тестирования
+# Для теста: установите небольшое число (например, 5)
+# Для полного парсинга: установите None
+MAX_PAGES_PER_YEAR = None  # Измените на число для тестирования (например, 5)
 
 # ========================================
 
@@ -294,10 +296,27 @@ try:
                                     if table_df.empty or len(table_df.columns) < 3:
                                         continue
 
-                                    # Извлекаем только нужные колонки: Город (col 0), Цена (col 2)
+                                    # Определяем индекс колонки с ценой в зависимости от класса
+                                    # Структура таблицы: Город, Валюта, Класс3(цена,изм,%,тренд), Класс4(...), Класс5(...)
+                                    # Колонки: 0=Город, 1=Валюта, 2=Класс3_цена, 6=Класс4_цена, 10=Класс5_цена
+                                    price_col_index = 2  # По умолчанию класс 3
+
+                                    if crop_class is not None:
+                                        if crop_class == 3:
+                                            price_col_index = 2
+                                        elif crop_class == 4:
+                                            price_col_index = 6
+                                        elif crop_class == 5:
+                                            price_col_index = 10
+
+                                    # Проверяем, что нужная колонка существует
+                                    if len(table_df.columns) <= price_col_index:
+                                        continue
+
+                                    # Извлекаем только нужные колон��и: Город (col 0), Цена (зависит от класса)
                                     result_df = pd.DataFrame({
                                         'Город': table_df.iloc[:, 0],
-                                        'Цена_руб_т': pd.to_numeric(table_df.iloc[:, 2], errors='coerce'),
+                                        'Цена_руб_т': pd.to_numeric(table_df.iloc[:, price_col_index], errors='coerce'),
                                         'Дата': date_str,
                                         'Год': year,
                                         'Культура': crop_name,
