@@ -2,7 +2,7 @@ package com.omstu.agriculturefield.controller;
 
 import com.omstu.agriculturefield.dto.crop.CropTypeRequest;
 import com.omstu.agriculturefield.dto.crop.CropTypeResponse;
-import com.omstu.agriculturefield.service.CropTypeService;
+import com.omstu.agriculturefield.service.BaseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,30 +19,31 @@ import java.util.List;
 @RequestMapping("/api/crop-type")
 @RequiredArgsConstructor
 public class CropTypeController {
-    private final CropTypeService cropTypeService;
+
+    private final BaseService<CropTypeRequest, CropTypeResponse, Long> cropTypeService;
 
     @GetMapping
     public List<CropTypeResponse> getAllCropTypes() {
-        return cropTypeService.getAllCropTypes();
+        return cropTypeService.getAll();
     }
 
     @GetMapping("/{id}")
     public CropTypeResponse getCropTypeById(@PathVariable Long id) {
-        return cropTypeService.getCropTypeById(id);
+        return cropTypeService.getById(id);
     }
 
     @PostMapping
-    public CropTypeResponse createCropType(@RequestBody CropTypeRequest cropType) {
-        return cropTypeService.createCropType(cropType);
+    public CropTypeResponse createCropType(@RequestBody CropTypeRequest request) {
+        return cropTypeService.create(request);
     }
 
     @PutMapping("/{id}")
-    public CropTypeResponse updateCropType(@PathVariable Long id, @RequestBody CropTypeRequest cropType) {
-        return cropTypeService.updateCropType(id, cropType);
+    public CropTypeResponse updateCropType(@PathVariable Long id, @RequestBody CropTypeRequest request) {
+        return cropTypeService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     public void deleteCropType(@PathVariable Long id) {
-        cropTypeService.deleteCropType(id);
+        cropTypeService.delete(id);
     }
 }
