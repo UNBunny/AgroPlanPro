@@ -3,6 +3,8 @@ package com.omstu.agriculturefield.crop.model;
 import com.omstu.agriculturefield.crop.model.enums.ToleranceLevel;
 import com.omstu.agriculturefield.disease.model.DiseaseResistance;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -42,8 +44,10 @@ public class CropVariety {
     )
     private Set<DiseaseResistance> diseaseResistance; // Устойчивость к заболеваниям (уже рассчитана заранее)
 
+    @Enumerated(EnumType.STRING)
     private ToleranceLevel droughtTolerance; // Устойчивость к засухе
 
+    @Enumerated(EnumType.STRING)
     private ToleranceLevel frostTolerance; // Устойчивость к заморозкам
 
     private BigDecimal recommendedSeedingRateKgPerHa; // Рекомендуемая норма высева

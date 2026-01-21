@@ -4,6 +4,8 @@ import com.omstu.agriculturefield.crop.model.CropType;
 import com.omstu.agriculturefield.disease.model.enums.RiskLevel;
 import com.omstu.agriculturefield.disease.model.enums.DiseaseType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,6 +31,7 @@ public class Disease {
 
     private String commonName;
 
+    @Enumerated(EnumType.STRING)
     private DiseaseType diseaseType; // Грибковое, бактериальное и тд
 
     @ManyToMany
@@ -45,6 +48,7 @@ public class Disease {
 
     private String treatmentMethods; // Методы лечения
 
+    @Enumerated(EnumType.STRING)
     private RiskLevel riskLevel;
 
     private String activeSeason;

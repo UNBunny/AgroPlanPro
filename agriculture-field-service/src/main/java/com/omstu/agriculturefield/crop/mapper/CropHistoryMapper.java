@@ -10,7 +10,7 @@ import org.mapstruct.Mapping;
 public interface CropHistoryMapper {
 
     @Mapping(target = "fieldId", source = "field.id")
-    @Mapping(target = "fieldName", source = "field.name")
+    @Mapping(target = "fieldName", source = "field.fieldName")
     @Mapping(target = "cropTypeId", source = "cropType.id")
     @Mapping(target = "cropTypeName", source = "cropType.name")
     @Mapping(target = "cropVarietyId", source = "cropVariety.id")

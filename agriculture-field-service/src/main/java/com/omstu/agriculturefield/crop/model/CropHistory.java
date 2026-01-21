@@ -3,6 +3,8 @@ package com.omstu.agriculturefield.crop.model;
 import com.omstu.agriculturefield.crop.model.enums.PlantingStatus;
 import com.omstu.agriculturefield.field.model.AgriculturalField;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -47,6 +49,7 @@ public class CropHistory {
 
     private BigDecimal expectedYieldKg;
 
+    @Enumerated(EnumType.STRING)
     private PlantingStatus plantingStatus; // Planned, Planted, Growing, Harvested
 
     private String notes; // Агроном пусть заполняет то что ему необходимо какие-то пометки

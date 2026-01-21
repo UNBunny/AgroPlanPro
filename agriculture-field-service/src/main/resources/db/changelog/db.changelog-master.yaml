@@ -6,3 +6,11 @@ databaseChangeLog:
         - sqlFile:
             path: changes/V_001_initial_field.sql
             relativeToChangelogFile: true
+
+  - changeSet:
+      id: 2
+      author: nikita
+      changes:
+        - sqlFile:
+            path: changes/V_002_insert_test_data.sql
+            relativeToChangelogFile: true

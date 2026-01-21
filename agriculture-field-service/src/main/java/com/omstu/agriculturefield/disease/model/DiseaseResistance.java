@@ -3,6 +3,8 @@ package com.omstu.agriculturefield.disease.model;
 import com.omstu.agriculturefield.crop.model.CropVariety;
 import com.omstu.agriculturefield.disease.model.enums.ResistanceLevel;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -26,5 +28,6 @@ public class DiseaseResistance {
     @ManyToOne(fetch = FetchType.LAZY)
     private CropVariety cropVariety;
 
+    @Enumerated(EnumType.STRING)
     private ResistanceLevel resistanceLevel;
 }
