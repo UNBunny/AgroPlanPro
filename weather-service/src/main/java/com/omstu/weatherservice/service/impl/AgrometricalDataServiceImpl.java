@@ -239,4 +239,103 @@ public class AgrometricalDataServiceImpl implements AgroMetricsService {
     private AgrometricalData createEmptyMetrics() {
         return new AgrometricalData(0.0, 0.0, 0.0, 0, 0.0, "Нет данных");
     }
+
+    @Override
+    public Mono<com.omstu.weatherservice.dto.SeasonalAgrometricsResponse> calculateSeasonalMetrics(
+            Double lat, Double lon, Integer year) {
+
+        log.info("Calculating seasonal metrics for year {} at location: lat={}, lon={}", year, lat, lon);
+
+        // Валидация года (Open-Meteo Archive доступен с 2016)
+        if (year < 2017 || year > java.time.LocalDate.now().getYear()) {
+            return Mono.error(new IllegalArgumentException(
+                    "Year must be between 2017 and current year (need previous autumn data)"));
+        }
+
+        // Запускаем все 5 запросов параллельно
+        Mono<AgrometricalData> octMarMono = calculateHistoricalMetrics(
+                lat, lon,
+                (year - 1) + "-10-01",  // Октябрь предыдущего года
+                year + "-03-31"          // Март текущего года
+        ).onErrorResume(e -> {
+            log.warn("Failed to get Oct-Mar data: {}", e.getMessage());
+            return Mono.just(createEmptyMetrics());
+        });
+
+        Mono<AgrometricalData> aprMayMono = calculateHistoricalMetrics(
+                lat, lon,
+                year + "-04-01",
+                year + "-05-31"
+        ).onErrorResume(e -> {
+            log.warn("Failed to get Apr-May data: {}", e.getMessage());
+            return Mono.just(createEmptyMetrics());
+        });
+
+        Mono<AgrometricalData> junJulMono = calculateHistoricalMetrics(
+                lat, lon,
+                year + "-06-01",
+                year + "-07-31"
+        ).onErrorResume(e -> {
+            log.warn("Failed to get Jun-Jul data: {}", e.getMessage());
+            return Mono.just(createEmptyMetrics());
+        });
+
+        Mono<AgrometricalData> augSepMono = calculateHistoricalMetrics(
+                lat, lon,
+                year + "-08-01",
+                year + "-09-30"
+        ).onErrorResume(e -> {
+            log.warn("Failed to get Aug-Sep data: {}", e.getMessage());
+            return Mono.just(createEmptyMetrics());
+        });
+
+        Mono<AgrometricalData> aprSepMono = calculateHistoricalMetrics(
+                lat, lon,
+                year + "-04-01",
+                year + "-09-30"
+        ).onErrorResume(e -> {
+            log.warn("Failed to get Apr-Sep data: {}", e.getMessage());
+            return Mono.just(createEmptyMetrics());
+        });
+
+        // Объединяем все результаты
+        return Mono.zip(octMarMono, aprMayMono, junJulMono, augSepMono, aprSepMono)
+                .map(tuple -> {
+                    AgrometricalData octMar = tuple.getT1();
+                    AgrometricalData aprMay = tuple.getT2();
+                    AgrometricalData junJul = tuple.getT3();
+                    AgrometricalData augSep = tuple.getT4();
+                    AgrometricalData aprSep = tuple.getT5();
+
+                    log.info("Seasonal metrics assembled for year {}: GTK(Apr-Sep)={}, precip(Oct-Mar)={}mm",
+                            year, aprSep.gtk(), octMar.sumPrecipitation());
+
+                    return new com.omstu.weatherservice.dto.SeasonalAgrometricsResponse(
+                            year,
+                            // Октябрь-Март
+                            octMar.sumPrecipitation(),
+                            octMar.minTempRecord(),
+                            // Апрель-Май
+                            aprMay.sumPrecipitation(),
+                            aprMay.sumEffectiveTemp(),
+                            aprMay.minTempRecord() < 0,  // frost risk
+                            // Июнь-Июль
+                            junJul.sumPrecipitation(),
+                            junJul.sumEffectiveTemp(),
+                            junJul.heatStressDays(),
+                            junJul.gtk(),
+                            // Август-Сентябрь
+                            augSep.sumPrecipitation(),
+                            augSep.sumEffectiveTemp(),
+                            augSep.heatStressDays(),
+                            // Полный сезон Апрель-Сентябрь
+                            aprSep.gtk(),
+                            aprSep.sumEffectiveTemp(),
+                            aprSep.heatStressDays(),
+                            aprSep.minTempRecord()
+                    );
+                })
+                .doOnSuccess(result -> log.info("Seasonal metrics calculated successfully for year {}", year))
+                .doOnError(e -> log.error("Failed to calculate seasonal metrics: {}", e.getMessage()));
+    }
 }
