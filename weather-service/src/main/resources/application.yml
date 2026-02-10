@@ -31,6 +31,15 @@ spring:
     init:
       mode: always
 
+# Weather API Configuration
+weather:
+  api:
+    forecast-base-url: https://api.open-meteo.com/v1
+    historical-base-url: https://archive-api.open-meteo.com/v1
+    max-in-memory-size: 10485760  # 10MB
+    historical-data-lag-days: 5
+    long-period-threshold-months: 3
+
 logging:
   level:
     org:
@@ -46,6 +55,9 @@ logging:
           descriptor:
             sql:
               BasicBinder: TRACE
+    com:
+      omstu:
+        weatherservice: INFO
 
 eureka:
   client:
