@@ -1,6 +1,7 @@
 package com.omstu.weatherservice.controller;
 
 import com.omstu.weatherservice.dto.AgrometricalData;
+import com.omstu.weatherservice.dto.SeasonalAgrometricsResponse;
 import com.omstu.weatherservice.service.AgroMetricsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -146,6 +147,40 @@ public class AgroMetricsController {
                 .doOnSuccess(response -> log.info("Averaged next season metrics request completed successfully"))
                 .onErrorResume(e -> {
                     log.error("Averaged next season metrics request failed: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.badRequest().build());
+                });
+    }
+
+    /**
+     * Получить сезонные агрометрики для года урожая.
+     *
+     * Один запрос возвращает все важные периоды:
+     * - Октябрь-Март: накопленная влага (для озимых)
+     * - Апрель-Май: старт вегетации
+     * - Июнь-Июль: критический период (колошение, цветение)
+     * - Август-Сентябрь: созревание, уборка
+     * - Апрель-Сентябрь: полный вегетационный период
+     *
+     * Это оптимальный эндпоинт для ML-моделей: один запрос = все данные за год.
+     *
+     * @param lat  широта
+     * @param lon  долгота
+     * @param year год урожая (например, 2023). Минимум 2017 (нужны данные за осень предыдущего года)
+     * @return сезонные агрометеорологические метрики
+     */
+    @GetMapping("/seasonal")
+    public Mono<ResponseEntity<SeasonalAgrometricsResponse>> getSeasonalMetrics(
+            @RequestParam Double lat,
+            @RequestParam Double lon,
+            @RequestParam Integer year
+    ) {
+        log.info("Received seasonal agro metrics request: lat={}, lon={}, year={}", lat, lon, year);
+
+        return agroMetricsService.calculateSeasonalMetrics(lat, lon, year)
+                .map(ResponseEntity::ok)
+                .doOnSuccess(response -> log.info("Seasonal agro metrics request completed successfully for year {}", year))
+                .onErrorResume(e -> {
+                    log.error("Seasonal agro metrics request failed: {}", e.getMessage());
                     return Mono.just(ResponseEntity.badRequest().build());
                 });
     }

@@ -58,5 +58,23 @@ public interface AgroMetricsService {
      * @return текстовая интерпретация
      */
     String interpretGtk(double gtk);
+
+    /**
+     * Рассчитывает сезонные агрометрики для конкретного года урожая.
+     *
+     * Один запрос возвращает данные по всем важным периодам:
+     * - Октябрь-Март: накопленная влага (для озимых)
+     * - Апрель-Май: старт вегетации
+     * - Июнь-Июль: критический период
+     * - Август-Сентябрь: уборка/поздние культуры
+     * - Апрель-Сентябрь: полный вегетационный период
+     *
+     * @param lat широта
+     * @param lon долгота
+     * @param year год урожая (например, 2023)
+     * @return сезонные агрометеорологические данные
+     */
+    Mono<com.omstu.weatherservice.dto.SeasonalAgrometricsResponse> calculateSeasonalMetrics(
+            Double lat, Double lon, Integer year);
 }
 
