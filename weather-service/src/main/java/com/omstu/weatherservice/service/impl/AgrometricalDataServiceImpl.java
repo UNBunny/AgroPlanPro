@@ -2,6 +2,7 @@ package com.omstu.weatherservice.service.impl;
 
 import com.omstu.weatherservice.dto.AgrometricalData;
 import com.omstu.weatherservice.dto.OpenMeteoResponse;
+import com.omstu.weatherservice.dto.SeasonalAgrometricsResponse;
 import com.omstu.weatherservice.dto.WeatherRequestType;
 import com.omstu.weatherservice.service.AgroMetricsService;
 import lombok.RequiredArgsConstructor;
@@ -9,11 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Реализация сервиса для расчета агрометеорологических показателей
- * Рассчитывает ГТК (гидротермический коэффициент Селянинова), тепловой стресс и другие метрики
  */
 @Service
 @Slf4j
@@ -22,10 +24,11 @@ public class AgrometricalDataServiceImpl implements AgroMetricsService {
 
     private final OpenMeteoService openMeteoService;
 
-    // Константы для расчетов
     private static final double ACTIVE_TEMP_THRESHOLD = 10.0;
     private static final double HEAT_STRESS_THRESHOLD = 30.0;
+    private static final double EXTREME_HEAT_THRESHOLD = 35.0;
     private static final double GTK_MULTIPLIER = 10.0;
+    private static final double DRY_DAY_THRESHOLD = 1.0;
 
     @Override
     public Mono<AgrometricalData> calculateHistoricalMetrics(
@@ -36,97 +39,134 @@ public class AgrometricalDataServiceImpl implements AgroMetricsService {
 
         return openMeteoService.getWeather(lat, lon, WeatherRequestType.HISTORIC, null, startDate, endDate)
                 .map(this::calculateMetricsFromResponse)
-                .doOnSuccess(metrics -> log.info("Historical metrics calculated successfully: GTK={}, stressLevel={}",
-                        metrics.gtk(), metrics.stressLevel()))
+                .doOnSuccess(metrics -> log.info("Historical metrics calculated: GTK={}", metrics.gtk()))
                 .doOnError(e -> log.error("Failed to calculate historical metrics: {}", e.getMessage()));
     }
 
     @Override
     public Mono<AgrometricalData> calculateForecastMetrics(Double lat, Double lon, Integer days) {
-        log.info("Calculating forecast agro metrics for {} days at location: lat={}, lon={}",
-                days, lat, lon);
+        log.info("Calculating forecast agro metrics for {} days at location: lat={}, lon={}", days, lat, lon);
 
         return openMeteoService.getWeather(lat, lon, WeatherRequestType.FORECAST, days, null, null)
                 .map(this::calculateMetricsFromResponse)
-                .doOnSuccess(metrics -> log.info("Forecast metrics calculated successfully: GTK={}, stressLevel={}",
-                        metrics.gtk(), metrics.stressLevel()))
+                .doOnSuccess(metrics -> log.info("Forecast metrics calculated: GTK={}", metrics.gtk()))
                 .doOnError(e -> log.error("Failed to calculate forecast metrics: {}", e.getMessage()));
     }
 
     @Override
     public AgrometricalData calculateMetricsFromResponse(OpenMeteoResponse response) {
-        log.debug("Processing weather response with {} daily records",
-                response.daily() != null && response.daily().time() != null ? response.daily().time().size() : 0);
-
         if (response.daily() == null) {
-            log.warn("No daily data in response, returning empty metrics");
             return createEmptyMetrics();
         }
 
         List<Double> temperatures = response.daily().temperatureMax();
         List<Double> precipitations = response.daily().precipitationSum();
+        List<Double> tempMean = response.daily().temperatureMean();
 
         if (temperatures == null || temperatures.isEmpty()) {
-            log.warn("No temperature data available, returning empty metrics");
             return createEmptyMetrics();
         }
 
+        return computeMetrics(temperatures, precipitations, tempMean);
+    }
+
+    /**
+     * Вычисляет метрики для подмножества дней, отфильтрованных по диапазону дат.
+     */
+    private AgrometricalData computeMetricsForPeriod(
+            OpenMeteoResponse response, LocalDate from, LocalDate to
+    ) {
+        if (response.daily() == null || response.daily().time() == null) {
+            return createEmptyMetrics();
+        }
+
+        List<String> times = response.daily().time();
+        List<Double> tempMax = response.daily().temperatureMax();
+        List<Double> precip = response.daily().precipitationSum();
+        List<Double> tempMean = response.daily().temperatureMean();
+
+        List<Double> filteredTemp = new ArrayList<>();
+        List<Double> filteredPrecip = new ArrayList<>();
+        List<Double> filteredMean = new ArrayList<>();
+
+        for (int i = 0; i < times.size(); i++) {
+            LocalDate date = LocalDate.parse(times.get(i));
+            if (!date.isBefore(from) && !date.isAfter(to)) {
+                filteredTemp.add(tempMax != null && i < tempMax.size() ? tempMax.get(i) : null);
+                filteredPrecip.add(precip != null && i < precip.size() ? precip.get(i) : null);
+                filteredMean.add(tempMean != null && i < tempMean.size() ? tempMean.get(i) : null);
+            }
+        }
+
+        return computeMetrics(filteredTemp, filteredPrecip, filteredMean);
+    }
+
+    private AgrometricalData computeMetrics(
+            List<Double> temperatures, List<Double> precipitations, List<Double> tempMean
+    ) {
         double sumEffectiveTemp = 0.0;
         double sumPrecipitation = 0.0;
+        double sumAllPrecip = 0.0;
         int heatStressDays = 0;
+        int extremeHeatDays = 0;
         double minTemp = Double.MAX_VALUE;
+        double sumMeanTemp = 0.0;
+        int meanTempCount = 0;
+
+        // For longest dry period
+        int currentDryStreak = 0;
+        int longestDryPeriod = 0;
 
         for (int i = 0; i < temperatures.size(); i++) {
-            double temp = temperatures.get(i);
-            double rain = (precipitations != null && i < precipitations.size())
+            Double tempVal = temperatures.get(i);
+            if (tempVal == null) continue;
+            double temp = tempVal;
+
+            double rain = (precipitations != null && i < precipitations.size() && precipitations.get(i) != null)
                     ? precipitations.get(i) : 0.0;
 
-            // 1. Поиск минимальной температуры (для определения заморозков)
-            if (temp < minTemp) {
-                minTemp = temp;
-            }
+            sumAllPrecip += rain;
 
-            // 2. Подсчет дней теплового стресса (T > 30°C)
-            if (temp > HEAT_STRESS_THRESHOLD) {
-                heatStressDays++;
-            }
+            if (temp < minTemp) minTemp = temp;
+            if (temp > HEAT_STRESS_THRESHOLD) heatStressDays++;
+            if (temp > EXTREME_HEAT_THRESHOLD) extremeHeatDays++;
 
-            // 3. Расчет по формуле Селянинова: учитываются только дни с T > 10°C
             if (temp > ACTIVE_TEMP_THRESHOLD) {
                 sumEffectiveTemp += temp;
                 sumPrecipitation += rain;
             }
+
+            // Mean temp
+            if (tempMean != null && i < tempMean.size() && tempMean.get(i) != null) {
+                sumMeanTemp += tempMean.get(i);
+                meanTempCount++;
+            }
+
+            // Dry streak
+            if (rain < DRY_DAY_THRESHOLD) {
+                currentDryStreak++;
+                if (currentDryStreak > longestDryPeriod) longestDryPeriod = currentDryStreak;
+            } else {
+                currentDryStreak = 0;
+            }
         }
 
-        // Расчет ГТК (Гидротермический коэффициент)
-        // Формула: ГТК = (Сумма осадков * 10) / Сумма активных температур
         double gtk = calculateGtk(sumPrecipitation, sumEffectiveTemp);
         String stressLevel = interpretGtk(gtk);
-
-        log.debug("Metrics calculated: GTK={}, sumPrecip={}, sumEffTemp={}, heatDays={}, minTemp={}",
-                gtk, sumPrecipitation, sumEffectiveTemp, heatStressDays, minTemp);
+        double avgTemp = meanTempCount > 0 ? sumMeanTemp / meanTempCount : 0.0;
+        if (minTemp == Double.MAX_VALUE) minTemp = 0.0;
 
         return new AgrometricalData(
-                gtk,
-                sumPrecipitation,
-                sumEffectiveTemp,
-                heatStressDays,
-                minTemp,
-                stressLevel
+                gtk, sumAllPrecip, sumEffectiveTemp,
+                heatStressDays, minTemp, stressLevel,
+                avgTemp, extremeHeatDays, longestDryPeriod
         );
     }
 
-    /**
-     * Расчет гидротермического коэффициента Селянинова
-     */
     private double calculateGtk(double sumPrecipitation, double sumEffectiveTemp) {
-        if (sumEffectiveTemp <= 0) {
-            return 0.0;
-        }
+        if (sumEffectiveTemp <= 0) return 0.0;
         return (sumPrecipitation * GTK_MULTIPLIER) / sumEffectiveTemp;
     }
-
-
 
      @Override
     public Mono<AgrometricalData> calculateAveragedMetrics(
@@ -212,7 +252,10 @@ public class AgrometricalDataServiceImpl implements AgroMetricsService {
                                 avgEffectiveTemp,
                                 avgHeatStressDays,
                                 avgMinTemp,
-                                stressLevel
+                                stressLevel,
+                                0.0,
+                                0,
+                                0
                         );
                     })
                     .doOnError(e -> log.error("Failed to calculate averaged metrics: {}", e.getMessage()));
@@ -233,106 +276,68 @@ public class AgrometricalDataServiceImpl implements AgroMetricsService {
         return "Переувлажнение / Риск гниения";
     }
 
-    /**
-     * Создает пустой объект метрик для случаев, когда данные недоступны
-     */
     private AgrometricalData createEmptyMetrics() {
-        return new AgrometricalData(0.0, 0.0, 0.0, 0, 0.0, "Нет данных");
+        return new AgrometricalData(0.0, 0.0, 0.0, 0, 0.0, "Нет данных", 0.0, 0, 0);
     }
 
     @Override
-    public Mono<com.omstu.weatherservice.dto.SeasonalAgrometricsResponse> calculateSeasonalMetrics(
+    public Mono<SeasonalAgrometricsResponse> calculateSeasonalMetrics(
             Double lat, Double lon, Integer year) {
 
         log.info("Calculating seasonal metrics for year {} at location: lat={}, lon={}", year, lat, lon);
 
-        // Валидация года (Open-Meteo Archive доступен с 2016)
         if (year < 2017 || year > java.time.LocalDate.now().getYear()) {
             return Mono.error(new IllegalArgumentException(
                     "Year must be between 2017 and current year (need previous autumn data)"));
         }
 
-        // Запускаем все 5 запросов параллельно
-        Mono<AgrometricalData> octMarMono = calculateHistoricalMetrics(
-                lat, lon,
-                (year - 1) + "-10-01",  // Октябрь предыдущего года
-                year + "-03-31"          // Март текущего года
-        ).onErrorResume(e -> {
-            log.warn("Failed to get Oct-Mar data: {}", e.getMessage());
-            return Mono.just(createEmptyMetrics());
-        });
+        // Один запрос за весь период: октябрь прошлого года — сентябрь текущего
+        String startDate = (year - 1) + "-10-01";
+        String endDate = year + "-09-30";
 
-        Mono<AgrometricalData> aprMayMono = calculateHistoricalMetrics(
-                lat, lon,
-                year + "-04-01",
-                year + "-05-31"
-        ).onErrorResume(e -> {
-            log.warn("Failed to get Apr-May data: {}", e.getMessage());
-            return Mono.just(createEmptyMetrics());
-        });
+        return openMeteoService.getWeather(lat, lon, WeatherRequestType.HISTORIC, null, startDate, endDate)
+                .map(response -> {
+                    LocalDate octStart  = LocalDate.of(year - 1, 10, 1);
+                    LocalDate marEnd    = LocalDate.of(year, 3, 31);
+                    LocalDate aprStart  = LocalDate.of(year, 4, 1);
+                    LocalDate mayEnd    = LocalDate.of(year, 5, 31);
+                    LocalDate junStart  = LocalDate.of(year, 6, 1);
+                    LocalDate julEnd    = LocalDate.of(year, 7, 31);
+                    LocalDate augStart  = LocalDate.of(year, 8, 1);
+                    LocalDate sepEnd    = LocalDate.of(year, 9, 30);
 
-        Mono<AgrometricalData> junJulMono = calculateHistoricalMetrics(
-                lat, lon,
-                year + "-06-01",
-                year + "-07-31"
-        ).onErrorResume(e -> {
-            log.warn("Failed to get Jun-Jul data: {}", e.getMessage());
-            return Mono.just(createEmptyMetrics());
-        });
-
-        Mono<AgrometricalData> augSepMono = calculateHistoricalMetrics(
-                lat, lon,
-                year + "-08-01",
-                year + "-09-30"
-        ).onErrorResume(e -> {
-            log.warn("Failed to get Aug-Sep data: {}", e.getMessage());
-            return Mono.just(createEmptyMetrics());
-        });
-
-        Mono<AgrometricalData> aprSepMono = calculateHistoricalMetrics(
-                lat, lon,
-                year + "-04-01",
-                year + "-09-30"
-        ).onErrorResume(e -> {
-            log.warn("Failed to get Apr-Sep data: {}", e.getMessage());
-            return Mono.just(createEmptyMetrics());
-        });
-
-        // Объединяем все результаты
-        return Mono.zip(octMarMono, aprMayMono, junJulMono, augSepMono, aprSepMono)
-                .map(tuple -> {
-                    AgrometricalData octMar = tuple.getT1();
-                    AgrometricalData aprMay = tuple.getT2();
-                    AgrometricalData junJul = tuple.getT3();
-                    AgrometricalData augSep = tuple.getT4();
-                    AgrometricalData aprSep = tuple.getT5();
+                    AgrometricalData octMar = computeMetricsForPeriod(response, octStart, marEnd);
+                    AgrometricalData aprMay = computeMetricsForPeriod(response, aprStart, mayEnd);
+                    AgrometricalData junJul = computeMetricsForPeriod(response, junStart, julEnd);
+                    AgrometricalData augSep = computeMetricsForPeriod(response, augStart, sepEnd);
+                    AgrometricalData aprSep = computeMetricsForPeriod(response, aprStart, sepEnd);
 
                     log.info("Seasonal metrics assembled for year {}: GTK(Apr-Sep)={}, precip(Oct-Mar)={}mm",
                             year, aprSep.gtk(), octMar.sumPrecipitation());
 
-                    return new com.omstu.weatherservice.dto.SeasonalAgrometricsResponse(
+                    return new SeasonalAgrometricsResponse(
                             year,
-                            // Октябрь-Март
                             octMar.sumPrecipitation(),
                             octMar.minTempRecord(),
-                            // Апрель-Май
                             aprMay.sumPrecipitation(),
                             aprMay.sumEffectiveTemp(),
-                            aprMay.minTempRecord() < 0,  // frost risk
-                            // Июнь-Июль
+                            aprMay.minTempRecord() < 0,
+                            aprMay.gtk(),
                             junJul.sumPrecipitation(),
                             junJul.sumEffectiveTemp(),
                             junJul.heatStressDays(),
+                            junJul.extremeHeatDays(),
+                            junJul.avgTemp(),
                             junJul.gtk(),
-                            // Август-Сентябрь
                             augSep.sumPrecipitation(),
                             augSep.sumEffectiveTemp(),
                             augSep.heatStressDays(),
-                            // Полный сезон Апрель-Сентябрь
+                            augSep.gtk(),
                             aprSep.gtk(),
                             aprSep.sumEffectiveTemp(),
                             aprSep.heatStressDays(),
-                            aprSep.minTempRecord()
+                            aprSep.minTempRecord(),
+                            aprSep.longestDryPeriod()
                     );
                 })
                 .doOnSuccess(result -> log.info("Seasonal metrics calculated successfully for year {}", year))
