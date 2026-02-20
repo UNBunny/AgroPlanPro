@@ -7,29 +7,16 @@ import java.util.Set;
 
 public record DiseaseResponse(
         Long id,
-
         String scientificName,
-
         String commonName,
-
         DiseaseType diseaseType,
-
-        Set<Long> affectedCropIds, // ID культур, которые поражает болезнь
-
+        Set<Long> affectedCropIds,
         String symptoms,
-
         String preventionMeasures,
-
         String treatmentMethods,
-
         RiskLevel riskLevel,
-
         String activeSeason,
-
         String favorableConditions,
-
         String imageUrl,
-
         Boolean isActive
-) {
-}
+) {}

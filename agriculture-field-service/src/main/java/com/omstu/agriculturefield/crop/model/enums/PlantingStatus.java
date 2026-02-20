@@ -1,8 +1,5 @@
 package com.omstu.agriculturefield.crop.model.enums;
 
 public enum PlantingStatus {
-    PLANNED,
-    PLANTED,
-    GROWING,
-    HARVESTED
+    PLANNED, PLANTED, GROWING, HARVESTED, FAILED
 }
