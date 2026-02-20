@@ -24,7 +24,8 @@ public class AgriculturalField {
 
     private String fieldName;
 
-    private String crop_type;
+    @Column(name = "crop_type")
+    private String cropType;
 
     private String status;
 
