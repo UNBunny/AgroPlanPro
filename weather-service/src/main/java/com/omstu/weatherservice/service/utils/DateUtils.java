@@ -2,11 +2,39 @@ package com.omstu.weatherservice.service.utils;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DateUtils {
+/**
+ * Утилита для работы с датами и периодами
+ */
+public final class DateUtils {
 
+    private DateUtils() {
+        throw new UnsupportedOperationException("Utility class");
+    }
+
+    /**
+     * Определяет, является ли период длинным (больше заданного количества месяцев)
+     *
+     * @param startDate начальная дата
+     * @param endDate конечная дата
+     * @param thresholdMonths порог в месяцах
+     * @return true если период длинный
+     */
+    public static boolean isLongPeriod(LocalDate startDate, LocalDate endDate, int thresholdMonths) {
+        long monthsBetween = ChronoUnit.MONTHS.between(startDate, endDate);
+        return monthsBetween > thresholdMonths;
+    }
+
+    /**
+     * Разбивает период на интервалы по месяцам
+     *
+     * @param startDate начальная дата
+     * @param endDate конечная дата
+     * @return список интервалов
+     */
     public static List<DateRange> splitByMonths(LocalDate startDate, LocalDate endDate) {
         List<DateRange> ranges = new ArrayList<>();
 
@@ -26,6 +54,13 @@ public class DateUtils {
         return ranges;
     }
 
+    /**
+     * Разбивает период на интервалы по 3 месяца (оптимально для исторических данных)
+     *
+     * @param startDate начальная дата
+     * @param endDate конечная дата
+     * @return список интервалов
+     */
     public static List<DateRange> splitByThreeMonths(LocalDate startDate, LocalDate endDate) {
         List<DateRange> ranges = new ArrayList<>();
 
@@ -43,6 +78,9 @@ public class DateUtils {
         return ranges;
     }
 
+    /**
+     * Представляет временной интервал
+     */
     public record DateRange(LocalDate startDate, LocalDate endDate) {
         @Override
         public String toString() {

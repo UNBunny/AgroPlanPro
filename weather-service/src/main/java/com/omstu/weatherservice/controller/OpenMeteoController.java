@@ -3,31 +3,83 @@ package com.omstu.weatherservice.controller;
 import com.omstu.weatherservice.dto.OpenMeteoResponse;
 import com.omstu.weatherservice.dto.WeatherRequestType;
 import com.omstu.weatherservice.service.impl.OpenMeteoService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+/**
+ * REST контроллер для работы с погодными данными Open-Meteo
+ */
 @RestController
 @RequestMapping("/api/open-meteo")
+@RequiredArgsConstructor
+@Slf4j
 public class OpenMeteoController {
 
     private final OpenMeteoService openMeteoService;
 
-    public OpenMeteoController(OpenMeteoService openMeteoService) {
-        this.openMeteoService = openMeteoService;
-    }
-
+    /**
+     * Получить прогноз погоды на указанное количество дней
+     *
+     * @param lat  широта
+     * @param lon  долгота
+     * @param days количество дней прогноза (макс. 16)
+     * @return прогноз погоды
+     */
     @GetMapping("/ml")
-    public Mono<OpenMeteoResponse> getWeather(@RequestParam Double lat, @RequestParam Double lon, @RequestParam Integer days) {
-        return openMeteoService.getWeather(lat, lon, WeatherRequestType.FORECAST, days, null, null);
+    public Mono<ResponseEntity<OpenMeteoResponse>> getForecast(
+            @RequestParam Double lat,
+            @RequestParam Double lon,
+            @RequestParam Integer days
+    ) {
+        log.info("Received forecast request: lat={}, lon={}, days={}", lat, lon, days);
+
+        return openMeteoService.getWeather(lat, lon, WeatherRequestType.FORECAST, days, null, null)
+                .map(ResponseEntity::ok)
+                .doOnSuccess(response -> log.info("Forecast request completed successfully"))
+                .onErrorResume(e -> {
+                    log.error("Forecast request failed: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.badRequest().build());
+                });
     }
 
+    /**
+     * Получить исторические данные за указанный период
+     * Возвращает только дневные агрегаты
+     *
+     * @param lat       широта
+     * @param lon       долгота
+     * @param startDate начальная дата в формате yyyy-MM-dd (не ранее 2016-01-01)
+     * @param endDate   конечная дата в формате yyyy-MM-dd
+     * @return исторические данные
+     */
     @GetMapping("ml/historic-data")
-    public Mono<OpenMeteoResponse> getHistoricWeather(
-            @RequestParam Double lat, @RequestParam Double lon,
-            @RequestParam("start_date") String startDate, @RequestParam("end_date") String endDate) {
-        return openMeteoService.getWeather(lat, lon, WeatherRequestType.HISTORIC, null, startDate, endDate);
+    public Mono<ResponseEntity<OpenMeteoResponse>> getHistoricalData(
+            @RequestParam Double lat,
+            @RequestParam Double lon,
+            @RequestParam("start_date") String startDate,
+            @RequestParam("end_date") String endDate
+    ) {
+        log.info("Received historical data request: lat={}, lon={}, period={} to {}",
+                lat, lon, startDate, endDate);
+
+        return openMeteoService.getWeather(lat, lon, WeatherRequestType.HISTORIC, null, startDate, endDate)
+                .map(ResponseEntity::ok)
+                .doOnSuccess(response -> log.info("Historical data request completed successfully"))
+                .onErrorResume(e -> {
+                    log.error("Historical data request failed: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.badRequest().build());
+                });
+    }
+
+    /**
+     * Обработчик ошибок валидации
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleValidationException(IllegalArgumentException e) {
+        log.warn("Validation error: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(e.getMessage());
     }
 }
