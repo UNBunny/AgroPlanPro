@@ -8,12 +8,16 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface CropVarietyMapper {
-    @Mapping(target = "diseaseResistance", ignore = true)
-    CropVariety toEntity(CropVarietyRequest request);
 
     @Mapping(target = "diseaseResistance", ignore = true)
+    @Mapping(target = "cropType", ignore = true)
+    CropVariety toEntity(CropVarietyRequest request);
+
+    @Mapping(target = "cropTypeId", source = "cropType.id")
+    @Mapping(target = "cropTypeName", source = "cropType.name")
     CropVarietyResponse toResponse(CropVariety cropVariety);
 
     @Mapping(target = "diseaseResistance", ignore = true)
+    @Mapping(target = "cropType", ignore = true)
     CropVariety toEntityWithId(Long id, CropVarietyRequest request);
 }

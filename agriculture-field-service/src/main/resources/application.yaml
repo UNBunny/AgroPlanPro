@@ -46,6 +46,12 @@ logging:
             sql:
               BasicBinder: TRACE
 
+services:
+  weather-service:
+    url: ${WEATHER_SERVICE_URL:http://localhost:8082}
+  ml-service:
+    url: ${ML_SERVICE_URL:http://localhost:8000}
+
 eureka:
   client:
     service-url:
