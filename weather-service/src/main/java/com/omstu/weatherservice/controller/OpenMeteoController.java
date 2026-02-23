@@ -55,7 +55,7 @@ public class OpenMeteoController {
      * @param endDate   конечная дата в формате yyyy-MM-dd
      * @return исторические данные
      */
-    @GetMapping("ml/historic-data")
+    @GetMapping("/ml/historic-data")
     public Mono<ResponseEntity<OpenMeteoResponse>> getHistoricalData(
             @RequestParam Double lat,
             @RequestParam Double lon,
