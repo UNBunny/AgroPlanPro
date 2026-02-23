@@ -12,5 +12,37 @@ databaseChangeLog:
       author: nikita
       changes:
         - sqlFile:
+            path: changes/V_002_create_all_tables.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 3
+      author: nikita
+      changes:
+        - sqlFile:
+            path: changes/V_003_crop_rotation_rules.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 2a
+      author: nikita
+      changes:
+        - sqlFile:
             path: changes/V_002_insert_test_data.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 3a
+      author: nikita
+      changes:
+        - sqlFile:
+            path: changes/V_003_insert_rotation_rules.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 4
+      author: nikita
+      changes:
+        - sqlFile:
+            path: changes/V_004_create_disease_risk_rules.sql
             relativeToChangelogFile: true
