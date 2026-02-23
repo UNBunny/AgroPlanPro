@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "external-services.weather-service")
+@ConfigurationProperties(prefix = "services.weather-service")
 public class WeatherServiceProperties {
 
     private String baseUrl = "http://localhost:8082";
