@@ -38,3 +38,11 @@ databaseChangeLog:
         - sqlFile:
             path: changes/V_003_insert_rotation_rules.sql
             relativeToChangelogFile: true
+
+  - changeSet:
+      id: 4
+      author: nikita
+      changes:
+        - sqlFile:
+            path: changes/V_004_create_disease_risk_rules.sql
+            relativeToChangelogFile: true
